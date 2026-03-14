@@ -1,0 +1,24 @@
+{
+    "name": "indophp/auo",
+    "description": "UUID generator",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Indophp",
+            "email": "mail@domain-name.tld"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Indophp\\Auo\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.0"
+    },
+    "version": "1.0.0",
+    "config": {
+        "preferred-install": "dist"
+    }
+}
