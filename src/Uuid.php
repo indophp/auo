@@ -7,54 +7,96 @@ class Uuid
     private $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     private $base = 62;
 
-    public function generate(int $length = 17): string
+    private static $counter = 0; 
+    private $machineId;
+
+    public function __construct(int $machineId = 0)
     {
-        $yearPart  = str_pad($this->toBase62((int)date('Y')), 2, '0', STR_PAD_LEFT);
-        $weekPart  = str_pad($this->toBase62((int)date('W')), 2, '0', STR_PAD_LEFT);
-        $dayPart   = str_pad($this->toBase62((int)date('d')), 2, '0', STR_PAD_LEFT);
-        $hourPart  = str_pad($this->toBase62((int)date('H')), 2, '0', STR_PAD_LEFT);
-
-        $randomPartLength = $length - 8; // 8 karakter sudah terpakai
-        $randomPart = $this->generateRandomPart($randomPartLength);
-
-        return strtoupper($yearPart . $weekPart . $dayPart . $hourPart . $randomPart);
-    }
-
-    private function generateRandomPart(int $length): string
-    {
-        $randomPart = '';
-        for ($i = 0; $i < $length; $i++) {
-            $randomPart .= $this->characters[random_int(0, 61)];
+        if ($machineId < 0 || $machineId >= 3844) {
+            throw new \Exception("machineId harus antara 0-3843");
         }
-        return $randomPart;
+        $this->machineId = $machineId;
     }
 
-    private function toBase62(int $number): string
+    // Generate fully linear Base62 ID 17 karakter
+    public function generate(): string
     {
-        $result = '';
-        do {
-            $result = $this->characters[$number % $this->base] . $result;
-            $number = intdiv($number, $this->base);
-        } while ($number > 0);
-        return $result;
+        // Bagian waktu
+        $year  = (int) date('y');   // 2 digit tahun
+        $week  = (int) date('W');   // minggu ke
+        $day   = (int) date('d');   // tanggal
+        $hour  = (int) date('H');   // jam
+
+        $timeValue = $year * 1000000 + $week * 10000 + $day * 100 + $hour; // 8 digit time number
+
+        // Counter
+        self::$counter = (self::$counter + 1) % 3844; // 62^2
+
+        // Random 5 digit Base62 number
+        $randomValue = random_int(0, pow($this->base, 5) - 1);
+
+        // Combine all into one integer
+        // number_total = time*62^9 + machine*62^7 + counter*62^5 + random
+        $number = bcadd(
+            bcmul($timeValue, bcpow(62, 9)),
+            bcmul($this->machineId, bcpow(62, 7))
+        );
+        $number = bcadd($number, bcmul(self::$counter, bcpow(62, 5)));
+        $number = bcadd($number, $randomValue);
+
+        return $this->encodeBase62($number);
     }
 
+    // Decode linear Base62 ID menjadi bagian-bagian
     public function decode(string $id): array
     {
+        $number = $this->decodeBase62($id);
+
+        $randomValue = bcmod($number, bcpow(62, 5));
+        $number = bcdiv($number, bcpow(62, 5));
+
+        $counter = bcmod($number, 3844); // 62^2
+        $number = bcdiv($number, 3844);
+
+        $machineId = bcmod($number, 3844);
+        $number = bcdiv($number, 3844);
+
+        $timeValue = $number; // 8 digit time number
+        $hour = $timeValue % 100;
+        $day  = bcdiv($timeValue % 10000, 100);
+        $week = bcdiv($timeValue % 1000000, 10000);
+        $year = bcdiv($timeValue, 1000000);
+
         return [
-            'year'  => $this->fromBase62(substr($id, 0, 2)),
-            'week'  => $this->fromBase62(substr($id, 2, 2)),
-            'day'   => $this->fromBase62(substr($id, 4, 2)),
-            'hour'  => $this->fromBase62(substr($id, 6, 2)),
-            'random'=> substr($id, 8)
+            'year'      => (int)$year,
+            'week'      => (int)$week,
+            'day'       => (int)$day,
+            'hour'      => (int)$hour,
+            'machineId' => (int)$machineId,
+            'counter'   => (int)$counter,
+            'random'    => (int)$randomValue,
         ];
     }
 
-    private function fromBase62(string $str): int
+    private function encodeBase62($number): string
     {
-        $number = 0;
-        for ($i = 0; $i < strlen($str); $i++) {
-            $number = $number * $this->base + strpos($this->characters, $str[$i]);
+        $str = '';
+        do {
+            $mod = bcmod($number, 62);
+            $str = $this->characters[$mod] . $str;
+            $number = bcdiv($number, 62, 0);
+        } while ($number > 0);
+
+        // pad ke 17 karakter
+        return str_pad($str, 17, '0', STR_PAD_LEFT);
+    }
+
+    private function decodeBase62(string $str)
+    {
+        $number = '0';
+        $len = strlen($str);
+        for ($i = 0; $i < $len; $i++) {
+            $number = bcadd(bcmul($number, 62), strpos($this->characters, $str[$i]));
         }
         return $number;
     }
