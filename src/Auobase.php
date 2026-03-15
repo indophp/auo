@@ -19,7 +19,7 @@ class Auobase
     public function aut_admin($user)
     {
         $sql = "SELECT * FROM tb_admin 
-                WHERE user=:u OR email=:u OR nik=:u LIMIT 1";
+                WHERE auser=:u OR amail=:u LIMIT 1";
 
         $q = $this->pdo->prepare($sql);
         $q->execute(['u'=>$user]);
@@ -29,7 +29,7 @@ class Auobase
     public function aut_user($user)
     {
         $sql = "SELECT * FROM tb_user 
-                WHERE uid=:u OR email=:u LIMIT 1";
+                WHERE uuser=:u OR umail=:u LIMIT 1";
 
         $q = $this->pdo->prepare($sql);
         $q->execute(['u'=>$user]);
@@ -39,7 +39,7 @@ class Auobase
     public function aut_member($user)
     {
         $sql = "SELECT * FROM tb_member 
-                WHERE mid=:u OR email=:u LIMIT 1";
+                WHERE nim=:u OR mmail=:u LIMIT 1";
 
         $q = $this->pdo->prepare($sql);
         $q->execute(['u'=>$user]);
@@ -66,16 +66,18 @@ class Auobase
 
     public function logLoginAttempt($user,$success,$type=null,$id=null)
     {
-        $sql="INSERT INTO log_auo 
-        (username,success,user_type,user_id,created_at)
-        VALUES(:u,:s,:t,:i,NOW())";
+        $sql="INSERT INTO tb_log 
+        (username,user_type,user_id,success,ip_address,user_agent,created_at)
+        VALUES(:u,:t,:i,:s,:ip,:ua,NOW())";
 
         $q=$this->pdo->prepare($sql);
         $q->execute([
             'u'=>$user,
-            's'=>$success?1:0,
             't'=>$type,
-            'i'=>$id
+            'i'=>$id,
+            's'=>$success?1:0,
+            'ip'=>$_SERVER['REMOTE_ADDR'] ?? null,
+            'ua'=>$_SERVER['HTTP_USER_AGENT'] ?? null
         ]);
     }
 }
