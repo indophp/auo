@@ -1,6 +1,6 @@
 {
     "name": "indophp/auo",
-    "description": "UUID generator",
+    "description": "AUO Authentication UUID Authorization Library",
     "type": "library",
     "license": "MIT",
     "authors": [
