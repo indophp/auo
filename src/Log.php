@@ -9,37 +9,51 @@ class Log
 
     public function __construct()
     {
-        $this->db=new Auobase();
-        $this->aut=new Aut();
+        $this->db = new Auobase();
+        $this->aut = new Aut(); // pastikan class Aut sudah menyesuaikan UUID
     }
 
-    public function login($user,$pass)
+    public function login($user, $pass)
     {
-        $data=$this->db->aut_admin($user);
-        $type='admin';
+        // cek admin
+        $data = $this->db->aut_admin($user);
+        $type = 'admin';
 
-        if(!$data){
-            $data=$this->db->aut_user($user);
-            $type='user';
+        // cek user
+        if (!$data) {
+            $data = $this->db->aut_user($user);
+            $type = 'user';
         }
 
-        if(!$data){
-            $data=$this->db->aut_member($user);
-            $type='member';
+        // cek member
+        if (!$data) {
+            $data = $this->db->aut_member($user);
+            $type = 'member';
         }
 
-        if($data && password_verify($pass,$data['sandi'])){
-            $this->aut->setUserSession($data,$type);
+        // login berhasil
+        if ($data && password_verify($pass, $data['sandi'])) {
+            // set session
+            $this->aut->setUserSession($data, $type);
 
-            $id=$this->aut->getUserId();
+            // ambil UUID user
+            switch ($type) {
+                case 'admin': $id = $data['aid']; break;
+                case 'user':  $id = $data['uid']; break;
+                case 'member':$id = $data['mid']; break;
+            }
 
-            $this->db->updateLastLogin($id,$type);
-            $this->db->logLoginAttempt($user,true,$type,$id);
+            // update last login
+            $this->db->updateLastLogin($id, $type);
+
+            // log login sukses
+            $this->db->logLoginAttempt($user, true, $type, $id);
 
             return true;
         }
 
-        $this->db->logLoginAttempt($user,false);
+        // login gagal
+        $this->db->logLoginAttempt($user, false);
         return false;
     }
 
