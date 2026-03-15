@@ -17,26 +17,17 @@ class Uuid
         }
         $this->machineId = $machineId;
     }
-
-    // Generate fully linear Base62 ID 17 karakter
     public function generate(): string
     {
-        // Bagian waktu
-        $year  = (int) date('y');   // 2 digit tahun
-        $week  = (int) date('W');   // minggu ke
-        $day   = (int) date('d');   // tanggal
-        $hour  = (int) date('H');   // jam
+        $year  = (int) date('y');
+        $week  = (int) date('W');
+        $day   = (int) date('d');
+        $hour  = (int) date('H');
+        $timeValue = $year * 1000000 + $week * 10000 + $day * 100 + $hour;
+        self::$counter = (self::$counter + 1) % 3844;
 
-        $timeValue = $year * 1000000 + $week * 10000 + $day * 100 + $hour; // 8 digit time number
-
-        // Counter
-        self::$counter = (self::$counter + 1) % 3844; // 62^2
-
-        // Random 5 digit Base62 number
         $randomValue = random_int(0, pow($this->base, 5) - 1);
 
-        // Combine all into one integer
-        // number_total = time*62^9 + machine*62^7 + counter*62^5 + random
         $number = bcadd(
             bcmul($timeValue, bcpow(62, 9)),
             bcmul($this->machineId, bcpow(62, 7))
@@ -47,7 +38,6 @@ class Uuid
         return $this->encodeBase62($number);
     }
 
-    // Decode linear Base62 ID menjadi bagian-bagian
     public function decode(string $id): array
     {
         $number = $this->decodeBase62($id);
@@ -55,13 +45,13 @@ class Uuid
         $randomValue = bcmod($number, bcpow(62, 5));
         $number = bcdiv($number, bcpow(62, 5));
 
-        $counter = bcmod($number, 3844); // 62^2
+        $counter = bcmod($number, 3844);
         $number = bcdiv($number, 3844);
 
         $machineId = bcmod($number, 3844);
         $number = bcdiv($number, 3844);
 
-        $timeValue = $number; // 8 digit time number
+        $timeValue = $number;
         $hour = $timeValue % 100;
         $day  = bcdiv($timeValue % 10000, 100);
         $week = bcdiv($timeValue % 1000000, 10000);
@@ -87,7 +77,6 @@ class Uuid
             $number = bcdiv($number, 62, 0);
         } while ($number > 0);
 
-        // pad ke 17 karakter
         return str_pad($str, 17, '0', STR_PAD_LEFT);
     }
 
